@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>The Last Keeper</title>
+<style>
+:root {
+  --bg:        #F0EAE1;
+  --bg2:       #E8E0D5;
+  --surface:   #DDD4C8;
+  --surface2:  #CFC4B5;
+  --divider:   #BFB3A2;
+  --ink:       #2A2018;
+  --ink2:      #6E5F50;
+  --ink3:      #A0917F;
+  --accent:    #8B6A3E;
+  --accent-lt: #C4A06A;
+  --accent-fill: rgba(139,106,62,0.10);
+  --cell-on:   #C8964A;
+  --cell-bdr:  #A87830;
+  --hint:      #6A8B6A;
+  --danger:    #9B4A2A;
+  --r-sm: 9px; --r-md: 13px; --r-lg: 18px; --r-xl: 24px;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+
+html,body {
+  height:100%; overflow:hidden;
+  background:var(--bg);
+  font-family:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+  color:var(--ink);
+  user-select:none; -webkit-user-select:none;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ══════════════════════════════════════════
+   SCREENS — only one visible at a time
+══════════════════════════════════════════ */
+.screen {
+  position:fixed; inset:0;
+  display:flex; flex-direction:column; align-items:center;
+  padding:
+    max(env(safe-area-inset-top),24px)
+    max(env(safe-area-inset-right),20px)
+    max(env(safe-area-inset-bottom),28px)
+    max(env(safe-area-inset-left),20px);
+  opacity:0; pointer-events:none;
+  transition:opacity 0.28s ease;
+  overflow-y:auto;
+}
+.screen.active { opacity:1; pointer-events:all; }
+
+/* ══════════════════════════════════════════
+   MAIN MENU
+══════════════════════════════════════════ */
+#screen-menu {
+  justify-content:space-between;
+  background:var(--bg);
+}
+
+.menu-top { width:100%; max-width:340px; padding-top:8px; }
+
+.menu-eyebrow {
+  font-size:11px; font-weight:500; letter-spacing:0.08em;
+  color:var(--ink3); text-transform:uppercase; margin-bottom:6px;
+}
+
+.menu-title {
+  font-size:38px; font-weight:700; letter-spacing:-0.03em;
+  color:var(--ink); line-height:1.05; margin-bottom:6px;
+}
+
+.menu-tagline {
+  font-size:15px; color:var(--ink2); line-height:1.45;
+  max-width:280px;
+}
+
+/* lighthouse illustration — CSS only */
+.lighthouse {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  width:100%;
+}
+
+.lh-wrap { position:relative; width:120px; height:180px; }
+
+.lh-tower {
+  position:absolute; bottom:0; left:50%;
+  transform:translateX(-50%);
+  width:44px; height:130px;
+  background:linear-gradient(180deg, var(--surface) 0%, var(--surface2) 100%);
+  border-radius:4px 4px 0 0;
+}
+
+/* stripes */
+.lh-tower::before {
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  background:repeating-linear-gradient(
+    180deg, transparent 0px, transparent 18px,
+    rgba(139,106,62,0.18) 18px, rgba(139,106,62,0.18) 24px
+  );
+}
+
+.lh-room {
+  position:absolute; bottom:130px; left:50%;
+  transform:translateX(-50%);
+  width:54px; height:30px;
+  background:var(--surface);
+  border-radius:4px;
+  display:flex; align-items:center; justify-content:center;
+}
+
+.lh-light {
+  width:22px; height:22px; border-radius:50%;
+  background:var(--cell-on);
+  box-shadow:0 0 20px 8px rgba(200,150,74,0.35);
+  animation:lh-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes lh-pulse {
+  0%,100%{ box-shadow:0 0 20px 8px rgba(200,150,74,0.35); }
+  50%    { box-shadow:0 0 36px 16px rgba(200,150,74,0.55); }
+}
+
+.lh-cap {
+  position:absolute; bottom:160px; left:50%;
+  transform:translateX(-50%);
+  width:0; height:0;
+  border-left:28px solid transparent;
+  border-right:28px solid transparent;
+  border-bottom:20px solid var(--surface2);
+}
+
+.lh-base {
+  position:absolute; bottom:0; left:50%;
+  transform:translateX(-50%);
+  width:60px; height:12px;
+  background:var(--surface2);
+  border-radius:4px;
+}
+
+.lh-sea {
+  position:absolute; bottom:-18px; left:50%;
+  transform:translateX(-50%);
+  width:130px; height:12px;
+  background:var(--surface);
+  border-radius:100px;
+  opacity:0.6;
+}
+
+.menu-cards { width:100%; max-width:340px; display:flex; flex-direction:column; gap:10px; }
+
+.menu-card {
+  background:var(--surface);
+  border-radius:var(--r-lg);
+  padding:18px 20px;
+  cursor:pointer;
+  transition:opacity 0.12s;
+  position:relative; overflow:hidden;
+}
+.menu-card:active { opacity:0.7; }
+
+.menu-card-tag {
+  font-size:10px; font-weight:600; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:4px;
+}
+
+.menu-card-title {
+  font-size:19px; font-weight:700; letter-spacing:-0.01em;
+  color:var(--ink); margin-bottom:3px;
+}
+
+.menu-card-sub { font-size:13px; color:var(--ink2); line-height:1.4; }
+
+.menu-card-arrow {
+  position:absolute; right:18px; top:50%; transform:translateY(-50%);
+  font-size:20px; color:var(--accent-lt);
+}
+
+.menu-card.story-card::before {
+  content:''; position:absolute; right:-10px; top:-10px;
+  width:70px; height:70px;
+  background:radial-gradient(circle, rgba(139,106,62,0.08) 0%, transparent 70%);
+}
+
+.menu-progress-row {
+  display:flex; align-items:center; gap:8px; margin-top:8px;
+}
+.menu-progress-track {
+  flex:1; height:3px; background:var(--divider); border-radius:2px; overflow:hidden;
+}
+.menu-progress-fill { height:100%; background:var(--accent); border-radius:2px; transition:width 0.3s; }
+.menu-progress-label { font-size:11px; color:var(--ink3); white-space:nowrap; }
+
+/* ══════════════════════════════════════════
+   STORY CHAPTER SELECT
+══════════════════════════════════════════ */
+#screen-chapters {
+  background:var(--bg); gap:0; justify-content:flex-start;
+}
+
+.nav-bar {
+  width:100%; max-width:380px;
+  display:flex; align-items:center; gap:12px;
+  margin-bottom:20px;
+}
+
+.back-btn {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--surface);
+  border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; color:var(--ink2);
+  transition:opacity 0.12s; flex-shrink:0;
+}
+.back-btn:active { opacity:0.6; }
+
+.nav-title {
+  font-size:17px; font-weight:600; color:var(--ink);
+  letter-spacing:-0.01em;
+}
+
+.chapters-list { width:100%; max-width:380px; display:flex; flex-direction:column; gap:8px; }
+
+.chapter-row {
+  background:var(--surface);
+  border-radius:var(--r-md);
+  padding:14px 16px;
+  display:flex; align-items:center; gap:14px;
+  cursor:pointer; transition:opacity 0.12s;
+  position:relative;
+}
+.chapter-row:active { opacity:0.65; }
+.chapter-row.locked { opacity:0.4; pointer-events:none; }
+
+.chapter-num {
+  width:34px; height:34px; border-radius:50%;
+  background:var(--bg2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; color:var(--ink2);
+  flex-shrink:0;
+}
+.chapter-row.done .chapter-num { background:var(--accent); color:#fff; }
+.chapter-row.current .chapter-num { background:var(--accent-lt); color:#fff; }
+
+.chapter-info { flex:1; min-width:0; }
+.chapter-title { font-size:15px; font-weight:600; color:var(--ink); margin-bottom:2px; }
+.chapter-sub   { font-size:12px; color:var(--ink3); }
+
+.chapter-badge {
+  font-size:10px; font-weight:600; letter-spacing:0.06em;
+  text-transform:uppercase; padding:3px 8px;
+  border-radius:100px; background:var(--accent-fill);
+  color:var(--accent); white-space:nowrap;
+}
+.chapter-badge.done-badge { background:rgba(106,139,106,0.12); color:var(--hint); }
+
+/* ══════════════════════════════════════════
+   STORY / TUTORIAL NARRATIVE SCREEN
+══════════════════════════════════════════ */
+#screen-story {
+  background:var(--bg);
+  justify-content:space-between;
+}
+
+.story-chapter-label {
+  font-size:11px; font-weight:500; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--accent);
+  margin-bottom:10px; align-self:flex-start;
+  width:100%; max-width:340px;
+}
+
+.story-body {
+  flex:1; width:100%; max-width:340px;
+  display:flex; flex-direction:column; justify-content:center; gap:20px;
+}
+
+.story-location {
+  font-size:12px; font-weight:500; letter-spacing:0.06em;
+  text-transform:uppercase; color:var(--ink3);
+}
+
+.story-text {
+  font-size:17px; line-height:1.65;
+  color:var(--ink); font-weight:400;
+}
+
+.story-text em { font-style:italic; color:var(--ink2); }
+
+/* tutorial hint box */
+.tutorial-box {
+  background:var(--surface);
+  border-radius:var(--r-md);
+  padding:14px 16px;
+  border-left:3px solid var(--accent);
+}
+.tutorial-box-label {
+  font-size:10px; font-weight:700; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:6px;
+}
+.tutorial-box-text { font-size:14px; color:var(--ink2); line-height:1.5; }
+
+.story-btn {
+  width:100%; max-width:340px;
+  height:50px; border:none; border-radius:var(--r-md);
+  background:var(--accent); color:#FBF5EC;
+  font-family:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+  font-size:16px; font-weight:600; cursor:pointer;
+  transition:opacity 0.12s;
+  -webkit-font-smoothing:antialiased;
+}
+.story-btn:active { opacity:0.6; }
+
+/* ══════════════════════════════════════════
+   GAME SCREEN
+══════════════════════════════════════════ */
+#screen-game {
+  background:var(--bg); gap:12px;
+  justify-content:space-between;
+}
+
+.game-nav {
+  width:100%; max-width:340px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+
+.game-nav-left { display:flex; align-items:center; gap:10px; }
+.game-mode-tag {
+  font-size:11px; font-weight:600; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--accent);
+}
+.game-chapter-name {
+  font-size:13px; color:var(--ink2);
+}
+
+.icon-btn {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--surface); border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; color:var(--ink2); transition:opacity 0.12s;
+}
+.icon-btn:active { opacity:0.6; }
+
+/* par badge */
+.par-badge {
+  font-size:12px; font-weight:600;
+  padding:4px 10px; border-radius:100px;
+  background:var(--surface);
+  color:var(--ink2);
+  transition:background 0.3s, color 0.3s;
+}
+.par-badge.under { background:rgba(106,139,106,0.15); color:var(--hint); }
+.par-badge.at    { background:rgba(139,106,62,0.12);  color:var(--accent); }
+.par-badge.over  { background:rgba(155,74,42,0.10);   color:var(--danger); }
+
+/* ─── LEVEL STRIP ─── */
+.level-strip { width:100%; max-width:340px; display:flex; flex-direction:column; gap:6px; }
+.level-header { display:flex; justify-content:space-between; align-items:baseline; }
+.level-badge  { font-size:15px; font-weight:600; color:var(--accent); letter-spacing:-0.01em; }
+.level-phase  { font-size:13px; color:var(--ink2); }
+
+.level-dots { display:flex; gap:4px; align-items:center; flex-wrap:nowrap; overflow:hidden; }
+.ldot { flex-shrink:0; height:4px; border-radius:2px; background:var(--divider); transition:background 0.2s; }
+.ldot.done { background:var(--accent-lt); }
+.ldot.curr { background:var(--accent); }
+.ldot.phase-sep { width:1px!important; height:10px; background:var(--divider); margin:0 2px; }
+
+/* ─── STATS ─── */
+.stats { display:flex; gap:8px; width:100%; max-width:340px; }
+.stat-card {
+  flex:1; background:var(--surface); border-radius:var(--r-md);
+  padding:9px 6px 8px; text-align:center;
+}
+.stat-label { font-size:10px; font-weight:500; color:var(--ink3);
+  text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px; }
+.stat-value { font-size:21px; font-weight:700; color:var(--ink); letter-spacing:-0.02em; line-height:1; }
+.stat-value.hi { color:var(--accent); }
+
+/* ─── PROGRESS ─── */
+.progress-wrap { width:100%; max-width:340px; height:3px;
+  border-radius:2px; background:var(--divider); overflow:hidden; }
+.progress-bar { height:100%; border-radius:2px; background:var(--accent); transition:width 0.3s ease; }
+
+/* ─── GRID ─── */
+.grid-wrap { flex:1; display:flex; align-items:center; justify-content:center; width:100%; }
+
+#grid {
+  display:grid;
+  background:var(--surface); border-radius:var(--r-lg);
+}
+
+.cell {
+  border-radius:var(--r-sm);
+  background:var(--surface2);
+  cursor:pointer;
+  transition:background 0.14s ease, box-shadow 0.14s ease;
+  -webkit-touch-callout:none;
+  position:relative;
+}
+.cell::after {
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  border-top:1px solid rgba(255,255,255,0.38);
+  border-bottom:1px solid rgba(0,0,0,0.07);
+  pointer-events:none;
+}
+.cell.on {
+  background:var(--cell-on);
+  box-shadow:0 1px 4px rgba(139,106,62,0.28), 0 0 0 1px var(--cell-bdr);
+}
+.cell.on::after { border-top-color:rgba(255,255,255,0.55); }
+
+.cell.hint-cell { box-shadow:0 0 0 2.5px var(--hint); }
+.cell.hint-cell.on { box-shadow:0 1px 4px rgba(139,106,62,0.22), 0 0 0 2.5px var(--hint); }
+
+/* tutorial pulse — draws attention to a cell */
+.cell.tut-pulse {
+  animation:tut-ring 1.2s ease-in-out infinite;
+}
+@keyframes tut-ring {
+  0%,100%{ box-shadow:0 0 0 2px var(--accent); }
+  50%    { box-shadow:0 0 0 5px rgba(139,106,62,0.2); }
+}
+
+@keyframes tap-dim { 0%{opacity:0.5} 100%{opacity:1} }
+.cell.tap-dim { animation:tap-dim 0.16s ease-out forwards; }
+
+@keyframes cell-in {
+  from{ opacity:0; transform:scale(0.88); }
+  to  { opacity:1; transform:scale(1); }
+}
+.cell-in { animation:cell-in 0.22s cubic-bezier(0.34,1.3,0.64,1) both; }
+
+@keyframes win-glow {
+  0%,100%{ background:var(--cell-on); box-shadow:0 1px 4px rgba(139,106,62,0.28),0 0 0 1px var(--cell-bdr); }
+  50%    { background:#D8A44E; box-shadow:0 2px 14px rgba(180,130,50,0.45),0 0 0 1px var(--cell-bdr); }
+}
+.win-pulse .cell.on { animation:win-glow 1s ease-in-out infinite; }
+
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+}
+.shake { animation:shake 0.28s ease; }
+
+/* ─── CONTROLS ─── */
+.controls { display:flex; gap:8px; width:100%; max-width:340px; }
+
+.btn {
+  flex:1; height:50px; border:none; border-radius:var(--r-md);
+  font-family:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+  font-size:15px; font-weight:600;
+  -webkit-font-smoothing:antialiased;
+  cursor:pointer; transition:opacity 0.1s;
+  display:flex; align-items:center; justify-content:center;
+}
+.btn:active { opacity:0.55; }
+.btn-primary    { background:var(--accent); color:#FBF5EC; }
+.btn-secondary  { background:var(--surface); color:var(--ink2); }
+.btn-secondary.hinting { color:var(--hint); box-shadow:inset 0 0 0 1.5px var(--hint); }
+.btn-destructive{ background:var(--surface); color:var(--danger); }
+
+/* hint counter pip */
+.hint-pips { display:flex; gap:3px; margin-left:5px; }
+.pip { width:5px; height:5px; border-radius:50%; background:var(--accent-lt); transition:background 0.2s; }
+.pip.used { background:var(--divider); }
+
+/* ══════════════════════════════════════════
+   BOTTOM SHEET (overlay)
+══════════════════════════════════════════ */
+.overlay {
+  position:fixed; inset:0;
+  background:rgba(240,234,225,0.75);
+  backdrop-filter:blur(20px) saturate(1.4);
+  -webkit-backdrop-filter:blur(20px) saturate(1.4);
+  display:flex; align-items:flex-end; justify-content:center;
+  z-index:100; opacity:0; pointer-events:none;
+  transition:opacity 0.25s;
+  padding:0 0 max(env(safe-area-inset-bottom),0px);
+}
+.overlay.show { opacity:1; pointer-events:all; }
+
+.sheet {
+  background:var(--bg);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;
+  width:100%; max-width:420px;
+  padding:12px 24px max(env(safe-area-inset-bottom),28px);
+  transform:translateY(100%);
+  transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+}
+.overlay.show .sheet { transform:translateY(0); }
+
+.sheet-handle {
+  width:36px; height:5px; border-radius:3px;
+  background:var(--divider); margin:0 auto 18px;
+}
+.sheet-icon  { font-size:38px; text-align:center; display:block; margin-bottom:6px; }
+.sheet-title { font-size:22px; font-weight:700; letter-spacing:-0.02em; text-align:center; margin-bottom:4px; }
+.sheet-sub   { font-size:14px; color:var(--ink2); text-align:center; margin-bottom:16px; }
+
+.sheet-group { background:var(--surface); border-radius:var(--r-md); overflow:hidden; margin-bottom:14px; }
+.sheet-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:13px 16px; border-bottom:1px solid var(--divider); font-size:15px;
+}
+.sheet-row:last-child { border-bottom:none; }
+.sheet-row span:first-child { color:var(--ink); }
+.sheet-row span:last-child  { color:var(--accent); font-weight:600; }
+
+/* par colour in sheet */
+.par-under { color:var(--hint)!important; }
+.par-at    { color:var(--accent)!important; }
+.par-over  { color:var(--danger)!important; }
+
+/* ══════════════════════════════════════════
+   STATS SCREEN
+══════════════════════════════════════════ */
+#screen-stats { background:var(--bg); gap:12px; justify-content:flex-start; }
+.stats-section { width:100%; max-width:380px; }
+.stats-section-title {
+  font-size:13px; font-weight:600; color:var(--ink3);
+  text-transform:uppercase; letter-spacing:0.06em;
+  margin-bottom:8px; padding-left:4px;
+}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+.toast {
+  position:fixed;
+  top:max(env(safe-area-inset-top),16px);
+  left:50%; transform:translateX(-50%) translateY(-56px);
+  background:var(--ink); color:var(--bg);
+  font-family:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+  font-size:13px; font-weight:500;
+  padding:9px 18px; border-radius:100px; z-index:300;
+  transition:transform 0.25s cubic-bezier(0.32,0.72,0,1);
+  white-space:nowrap; pointer-events:none;
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.alt  { background:var(--hint); color:#fff; }
+
+/* tutorial overlay tip */
+.tut-tip {
+  position:fixed; bottom:0; left:0; right:0;
+  background:var(--surface);
+  padding:16px 24px max(env(safe-area-inset-bottom),20px);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;
+  z-index:50;
+  transform:translateY(100%);
+  transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+.tut-tip.show { transform:translateY(0); }
+.tut-tip-label { font-size:10px; font-weight:700; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+.tut-tip-text  { font-size:15px; color:var(--ink); line-height:1.55; }
+.tut-tip-ok {
+  margin-top:14px; width:100%; height:46px; border:none;
+  border-radius:var(--r-md); background:var(--accent); color:#FBF5EC;
+  font-family:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+  font-size:15px; font-weight:600; cursor:pointer;
+  -webkit-font-smoothing:antialiased;
+}
+.tut-tip-ok:active { opacity:0.6; }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: MAIN MENU
+════════════════════════════════════════════ -->
+<div class="screen active" id="screen-menu">
+  <div class="menu-top">
+    <div class="menu-eyebrow">A puzzle game</div>
+    <div class="menu-title">The Last<br>Keeper</div>
+    <div class="menu-tagline">The lighthouse has gone dark. Only you can bring back the light.</div>
+  </div>
+
+  <div class="lighthouse">
+    <div class="lh-wrap">
+      <div class="lh-cap"></div>
+      <div class="lh-room"><div class="lh-light"></div></div>
+      <div class="lh-tower"></div>
+      <div class="lh-base"></div>
+      <div class="lh-sea"></div>
+    </div>
+  </div>
+
+  <div class="menu-cards">
+    <div class="menu-card story-card" id="menu-story-btn">
+      <div class="menu-card-tag">Story Mode</div>
+      <div class="menu-card-title">The Keeper's Journey</div>
+      <div class="menu-card-sub">20 chapters · Guided tutorial</div>
+      <div class="menu-progress-row">
+        <div class="menu-progress-track">
+          <div class="menu-progress-fill" id="menu-story-progress" style="width:0%"></div>
+        </div>
+        <div class="menu-progress-label" id="menu-story-label">0 / 20</div>
+      </div>
+      <div class="menu-card-arrow">›</div>
+    </div>
+
+    <div class="menu-card" id="menu-endless-btn">
+      <div class="menu-card-tag">Free Play</div>
+      <div class="menu-card-title">Open Sea</div>
+      <div class="menu-card-sub" id="menu-endless-sub">Endless random puzzles · Best: —</div>
+      <div class="menu-card-arrow">›</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: CHAPTER SELECT
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-chapters">
+  <div class="nav-bar">
+    <button class="back-btn" id="chapters-back">‹</button>
+    <div class="nav-title">The Keeper's Journey</div>
+  </div>
+  <div class="chapters-list" id="chapters-list"></div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: STORY NARRATIVE
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-story">
+  <div class="story-chapter-label" id="story-chapter-label">Chapter 1</div>
+  <div class="story-body">
+    <div class="story-location" id="story-location"></div>
+    <div class="story-text" id="story-text"></div>
+    <div class="tutorial-box" id="tutorial-box" style="display:none">
+      <div class="tutorial-box-label">How to play</div>
+      <div class="tutorial-box-text" id="tutorial-box-text"></div>
+    </div>
+  </div>
+  <button class="story-btn" id="story-continue-btn">Begin</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: GAME
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-game">
+  <!-- top nav -->
+  <div class="game-nav">
+    <div class="game-nav-left">
+      <button class="icon-btn" id="game-back-btn">‹</button>
+      <div>
+        <div class="game-mode-tag" id="game-mode-tag">Story</div>
+        <div class="game-chapter-name" id="game-chapter-name"></div>
+      </div>
+    </div>
+    <div class="par-badge" id="par-badge">Par —</div>
+  </div>
+
+  <!-- level dots (story only) -->
+  <div class="level-strip" id="level-strip" style="display:none">
+    <div class="level-header">
+      <span class="level-badge" id="level-badge">Level 1</span>
+      <span class="level-phase" id="level-phase">3 × 3</span>
+    </div>
+    <div class="level-dots" id="level-dots"></div>
+  </div>
+
+  <!-- stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Moves</div>
+      <div class="stat-value" id="moves-display">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Par</div>
+      <div class="stat-value hi" id="par-display">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Lit</div>
+      <div class="stat-value" id="lit-display">0</div>
+    </div>
+  </div>
+
+  <!-- progress -->
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+  </div>
+
+  <!-- grid -->
+  <div class="grid-wrap">
+    <div id="grid"></div>
+  </div>
+
+  <!-- controls -->
+  <div class="controls">
+    <button class="btn btn-secondary" id="btn-hint">
+      Hint
+      <div class="hint-pips" id="hint-pips"></div>
+    </button>
+    <button class="btn btn-primary"    id="btn-restart">Restart</button>
+    <button class="btn btn-destructive" id="btn-undo">Undo</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     WIN SHEET OVERLAY
+════════════════════════════════════════════ -->
+<div class="overlay" id="overlay-win">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <span class="sheet-icon" id="win-icon">✦</span>
+    <div class="sheet-title" id="win-title">Level Clear</div>
+    <div class="sheet-sub"   id="win-sub">All lights off</div>
+    <div class="sheet-group">
+      <div class="sheet-row"><span>Moves</span><span id="win-moves">0</span></div>
+      <div class="sheet-row"><span>Par</span>  <span id="win-par-val">—</span></div>
+      <div class="sheet-row"><span>Best</span> <span id="win-best">—</span></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" id="btn-next">Next Chapter</button>
+  </div>
+</div>
+
+<!-- TUTORIAL TIP PANEL -->
+<div class="tut-tip" id="tut-tip">
+  <div class="tut-tip-label" id="tut-tip-label">Step 1</div>
+  <div class="tut-tip-text"  id="tut-tip-text"></div>
+  <button class="tut-tip-ok" id="tut-tip-ok">Got it</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  STORY DATA — 20 chapters
+//  Ch 1-3:  3×3 (tutorial)
+//  Ch 4-10: 4×4
+//  Ch 11-20: 5×5
+// ═══════════════════════════════════════════════════
+const CHAPTERS = [
+  // ── TUTORIAL (3×3) ──────────────────────────────
+  {
+    title: "The Dark Shore",
+    location: "Ground Floor · The Entrance",
+    text: "The old lighthouse stands cold and silent at the edge of Mor Cove. You are Elara, the last of the keeper families. The electrical panels that once lit up the night have fallen into disarray — switches tangled, circuits confused.\n\nYour hand finds the first panel on the wall. A 3×3 grid of faded switches, some still glowing.",
+    tutorial: true,
+    tutorialText: "Tap any lit switch to toggle it — and its neighbours above, below, left and right — off or on. Your goal: turn every light off.",
+    size: 3, presses: 2
+  },
+  {
+    title: "The Store Room",
+    location: "Ground Floor · Supply Storage",
+    text: "Behind a rusted door you find the old keeper's store room. Shelves of oil cans and rope, a smell of salt and iron. Another panel hums faintly in the corner.\n\nYour grandfather used to say: <em>\"Sometimes you must light a candle to put out a fire.\"</em>",
+    tutorial: true,
+    tutorialText: "Tapping a dark switch can be useful — it may turn off lit neighbours. Think a step or two ahead.",
+    size: 3, presses: 3
+  },
+  {
+    title: "The Boiler Room",
+    location: "Ground Floor · Engine Bay",
+    text: "The old steam boiler sits cold, wrapped in decades of rust. Its gauges read nothing. Pipes run up into the dark above you.\n\nOn the main control panel, switches blink in irregular patterns. You recognise the logic now — this is the heart of the lighthouse's power.",
+    tutorial: true,
+    tutorialText: "Sometimes a puzzle has a unique minimum — the par score. Try to reach it. Use Hint if you're stuck; it shows the next optimal move.",
+    size: 3, presses: 4
+  },
+  // ── 4×4 CHAPTERS (4-10) ─────────────────────────
+  {
+    title: "The Spiral Stair",
+    location: "Lower Tower · Stairwell",
+    text: "The iron staircase spirals upward into the dark. Each landing has its own breaker panel. The first is a 4×4 grid — more circuits, more crossings.\n\nThe stone walls sweat with cold sea air. Somewhere above, a shutter bangs in the wind.",
+    size: 4, presses: 5
+  },
+  {
+    title: "The Watch Room",
+    location: "Mid Tower · First Watch Room",
+    text: "A small round room with a cracked window overlooking the bay. An old logbook lies open on the desk — the last entry reads simply: <em>\"The pattern always resolves.\"</em>\n\nYou study the panel. Four rows, four columns.",
+    size: 4, presses: 6
+  },
+  {
+    title: "The Fog Bell",
+    location: "Mid Tower · Bell Chamber",
+    text: "The fog bell hangs silent, its rope frayed to threads. In clear weather you can see the reef where twelve ships met their end before the light was built.\n\nThe bell's control panel is wet with condensation. You wipe it dry.",
+    size: 4, presses: 7
+  },
+  {
+    title: "The Storm Record",
+    location: "Mid Tower · Archive Room",
+    text: "Drawers full of weather logs, storm records going back a century. You find a photograph — your grandmother standing at the very top, light blazing behind her.\n\nThe panel here is stiff. The switches take real force to move.",
+    size: 4, presses: 7
+  },
+  {
+    title: "The Rain Collector",
+    location: "Upper Tower · Cistern Level",
+    text: "A great iron tank collects rainwater for the keepers who once lived here for months at a time. The air is different up here — lighter, windier.\n\nYou are nearly halfway up.",
+    size: 4, presses: 8
+  },
+  {
+    title: "The Blind Lantern",
+    location: "Upper Tower · Old Lamp Room",
+    text: "The original lamp room, long since replaced by the modern apparatus above. The brass fittings are green with age. The Fresnel lens sits in pieces on a workbench.\n\nSomeone tried to repair the panel and left it half-done.",
+    size: 4, presses: 9
+  },
+  {
+    title: "The Keeper's Quarter",
+    location: "Upper Tower · Living Room",
+    text: "A narrow bed, a single chair, a view of the whole ocean. This is where your grandfather slept, your mother, and her mother before her.\n\nOn the wall, a final 4×4 panel — the last before the beacon room.",
+    size: 4, presses: 9
+  },
+  // ── 5×5 CHAPTERS (11-20) ────────────────────────
+  {
+    title: "The Beacon Room",
+    location: "Summit · Lamp Room Threshold",
+    text: "You push open the hatch. The great lamp housing fills the room, a cathedral of glass and brass. Wind howls through the ventilation louvers.\n\nThe master control panel is enormous — five rows, five columns of switches.",
+    size: 5, presses: 6
+  },
+  {
+    title: "The First Arc",
+    location: "Summit · East Sector Panel",
+    text: "The lamp rotates on a huge bearing. Each sector of its rotation has its own circuit. You work the east arc first, methodically.\n\nThrough the glass you can see the reef, black and jagged below the grey sea.",
+    size: 5, presses: 7
+  },
+  {
+    title: "The Second Arc",
+    location: "Summit · South Sector Panel",
+    text: "Rain begins to streak the glass. The wind has picked up. You can hear the sea now, a low constant roar below everything.\n\nYour hands are steady. You have come this far.",
+    size: 5, presses: 8
+  },
+  {
+    title: "The Clockwork",
+    location: "Summit · Drive Mechanism",
+    text: "The great geared mechanism that turns the lamp — a wonder of Victorian engineering. If the circuits aren't balanced, the motor will seize.\n\nYou work carefully. One mistake here and the whole lamp stalls.",
+    size: 5, presses: 9
+  },
+  {
+    title: "The Storm Arrives",
+    location: "Summit · External Sensor Panel",
+    text: "Lightning flickers on the horizon. The storm your grandfather always warned about — the one that comes once a decade, that tests the reef, that hunts ships in the dark.\n\nYour urgency sharpens everything.",
+    size: 5, presses: 10
+  },
+  {
+    title: "The Failsafe",
+    location: "Summit · Emergency Backup",
+    text: "Behind a red panel cover, the emergency backup system. If the main light fails, this takes over. Nobody has tested it in forty years.\n\nYou test it now.",
+    size: 5, presses: 10
+  },
+  {
+    title: "The Eye of the Storm",
+    location: "Summit · Storm Shutter Control",
+    text: "A brief, eerie calm. The eye of the storm passes over Mor Cove. The sea goes flat and silver.\n\nYou work fast. The back wall of the storm is already visible, a black curtain coming across the water.",
+    size: 5, presses: 11
+  },
+  {
+    title: "The Final Circuit",
+    location: "Summit · Master Relay",
+    text: "One panel remains — the master relay that ties all circuits into a single output. Your grandmother's handwriting is still on the casing: <em>\"Close with care.\"</em>\n\nYou close with care.",
+    size: 5, presses: 12
+  },
+  {
+    title: "The Light Returns",
+    location: "Summit · Primary Lamp Array",
+    text: "The lamp housing trembles. The drive mechanism engages with a low, resonant clunk. All that stands between darkness and light is this last panel.\n\nAbove you, through the glass, a ship's light blinks on the horizon — searching, hoping.",
+    size: 5, presses: 13
+  },
+  {
+    title: "The Beam",
+    location: "Summit · Full System",
+    text: "This is it. Every circuit restored, every panel cleared. The great lamp is ready. You stand at the final master panel — five rows, five columns, every switch in the wrong state.\n\n<em>For the ships. For the reef. For every keeper who stood here before you.</em>",
+    size: 5, presses: 14
+  }
+];
+
+const TUTORIAL_STEPS = [
+  // ch 1 — one step
+  [
+    { label:"Your first panel", text:"Tap any glowing switch. It will toggle itself and its immediate neighbours — up, down, left, right. Your goal is to turn every light off." }
+  ],
+  // ch 2 — one step
+  [
+    { label:"Think ahead", text:"Turning on a dark switch can be useful — it may turn off bright neighbours in the process. Every puzzle has a solution. Look for it." }
+  ],
+  // ch 3 — one step
+  [
+    { label:"Par & Hints", text:"Each puzzle has a par score — the minimum moves needed. Use Hint (3 per chapter) to reveal the next best move. Try to finish at or below par." }
+  ]
+];
+
+// ═══════════════════════════════════════════════════
+//  GF(2) SOLVER
+// ═══════════════════════════════════════════════════
+function buildA(n){
+  const sz=n*n;
+  return Array.from({length:sz},(_,i)=>{
+    const a=new Uint8Array(sz),r=Math.floor(i/n),c=i%n;
+    a[i]=1;
+    if(r>0)   a[(r-1)*n+c]=1; if(r<n-1) a[(r+1)*n+c]=1;
+    if(c>0)   a[r*n+(c-1)]=1; if(c<n-1) a[r*n+(c+1)]=1;
+    return a;
+  });
+}
+
+function solveGF2(n,flat){
+  const sz=n*n;
+  const M=buildA(n).map((row,i)=>{const a=new Uint8Array(sz+1);a.set(row);a[sz]=flat[i];return a;});
+  const piv=new Int32Array(sz).fill(-1);
+  let row=0;
+  for(let col=0;col<sz&&row<sz;col++){
+    let f=-1;for(let r=row;r<sz;r++)if(M[r][col]){f=r;break;}
+    if(f<0)continue;
+    [M[row],M[f]]=[M[f],M[row]];piv[col]=row;
+    for(let r=0;r<sz;r++)if(r!==row&&M[r][col])for(let k=col;k<=sz;k++)M[r][k]^=M[row][k];
+    row++;
+  }
+  for(let r=row;r<sz;r++)if(M[r][sz])return null;
+  const free=[];for(let c=0;c<sz;c++)if(piv[c]<0)free.push(c);
+  const lim=1<<Math.min(free.length,14);let best=null,bc=Infinity;
+  for(let mask=0;mask<lim;mask++){
+    const x=new Uint8Array(sz);
+    for(let f=0;f<free.length;f++)x[free[f]]=(mask>>f)&1;
+    for(let col=sz-1;col>=0;col--){
+      if(piv[col]<0)continue;
+      let v=M[piv[col]][sz];for(let k=col+1;k<sz;k++)v^=M[piv[col]][k]&x[k];x[col]=v&1;
+    }
+    const cnt=x.reduce((s,v)=>s+v,0);if(cnt<bc){bc=cnt;best=x.slice();}
+  }
+  return best;
+}
+
+// ═══════════════════════════════════════════════════
+//  PERSISTENCE
+// ═══════════════════════════════════════════════════
+const SAVE_KEY = 'lk_save';
+function loadSave(){
+  try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'{}'); } catch(e){ return {}; }
+}
+function writeSave(s){ localStorage.setItem(SAVE_KEY, JSON.stringify(s)); }
+
+let save = loadSave();
+// save structure:
+// { storyLevel, bestStory:{1:moves,...}, endlessBest, totalMoves, hintsUsed }
+if(!save.storyLevel) save.storyLevel=1;
+if(!save.bestStory)  save.bestStory={};
+if(!save.endlessBest) save.endlessBest=null;
+if(!save.totalMoves)  save.totalMoves=0;
+if(!save.hintsUsed)   save.hintsUsed=0;
+writeSave(save);
+
+// ═══════════════════════════════════════════════════
+//  SCREEN ROUTING
+// ═══════════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════
+let MODE='story';       // 'story' | 'endless'
+let chapterIdx=0;       // 0-based chapter index (story)
+let SIZE=3;
+let grid=[];
+let moves=0;
+let history=[];
+let solution=null;
+let hintIdx=null;
+let hintsLeft=3;
+let initLit=0;
+let savedGrid=null;
+let parScore=null;      // optimal move count from solver
+
+let tutStep=-1;         // current tutorial step index (-1 = none)
+let tutSteps=[];
+
+const $=id=>document.getElementById(id);
+const gridEl=$('grid');
+
+// ═══════════════════════════════════════════════════
+//  MENU
+// ═══════════════════════════════════════════════════
+function updateMenu(){
+  const done=save.storyLevel-1;
+  const pct=Math.round((done/20)*100);
+  $('menu-story-progress').style.width=pct+'%';
+  $('menu-story-label').textContent=`${done} / 20`;
+  const eb=save.endlessBest;
+  $('menu-endless-sub').textContent=`Endless random puzzles · Best: ${eb!==null?eb:'—'}`;
+}
+
+$('menu-story-btn').addEventListener('click',()=>{
+  buildChapterList();
+  showScreen('screen-chapters');
+});
+
+$('menu-endless-btn').addEventListener('click',()=>{
+  startEndless();
+});
+
+// ═══════════════════════════════════════════════════
+//  CHAPTER LIST
+// ═══════════════════════════════════════════════════
+$('chapters-back').addEventListener('click',()=>showScreen('screen-menu'));
+
+function buildChapterList(){
+  const list=$('chapters-list'); list.innerHTML='';
+  CHAPTERS.forEach((ch,i)=>{
+    const lvl=i+1;
+    const isDone=lvl<save.storyLevel;
+    const isCurr=lvl===save.storyLevel;
+    const isLocked=lvl>save.storyLevel;
+
+    const row=document.createElement('div');
+    row.className='chapter-row'+(isDone?' done':isCurr?' current':isLocked?' locked':'');
+
+    const sizeLabel=ch.size===3?'3×3':ch.size===4?'4×4':'5×5';
+    const bestStr=save.bestStory[lvl]!==undefined?`Best: ${save.bestStory[lvl]} moves`:(isDone?'Completed':'');
+    const badgeText=isDone?'✓':'';
+    const badgeCls=isDone?'done-badge':'';
+    const phaseLabel=ch.tutorial?'Tutorial':'';
+
+    row.innerHTML=`
+      <div class="chapter-num">${lvl}</div>
+      <div class="chapter-info">
+        <div class="chapter-title">${ch.title}</div>
+        <div class="chapter-sub">${phaseLabel?phaseLabel+' · ':''} ${sizeLabel} ${bestStr?'· '+bestStr:''}</div>
+      </div>
+      ${badgeText?`<div class="chapter-badge ${badgeCls}">${badgeText}</div>`:''}
+    `;
+    if(!isLocked) row.addEventListener('click',()=>startStoryChapter(i));
+    list.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  STORY CHAPTER
+// ═══════════════════════════════════════════════════
+function startStoryChapter(idx){
+  chapterIdx=idx;
+  const ch=CHAPTERS[idx];
+
+  $('story-chapter-label').textContent=`Chapter ${idx+1} · ${ch.location}`;
+  $('story-location').textContent='';
+  // render newlines + em tags
+  $('story-text').innerHTML=ch.text.replace(/\n/g,'<br>');
+
+  if(ch.tutorial){
+    $('tutorial-box').style.display='block';
+    $('tutorial-box-text').textContent=ch.tutorialText;
+  } else {
+    $('tutorial-box').style.display='none';
+  }
+
+  $('story-continue-btn').textContent= idx===0?'Begin':'Enter room';
+  $('story-continue-btn').onclick=()=>{
+    showScreen('screen-game');
+    launchGame('story',idx);
+  };
+
+  showScreen('screen-story');
+}
+
+// ═══════════════════════════════════════════════════
+//  ENDLESS
+// ═══════════════════════════════════════════════════
+function startEndless(){
+  showScreen('screen-game');
+  launchGame('endless',0);
+}
+
+// ═══════════════════════════════════════════════════
+//  LAUNCH GAME
+// ═══════════════════════════════════════════════════
+function launchGame(mode, idx){
+  MODE=mode; chapterIdx=idx;
+  const ch=mode==='story'?CHAPTERS[idx]:null;
+  SIZE=ch?ch.size:5;
+
+  // UI labels
+  $('game-mode-tag').textContent=mode==='story'?'Story':'Free Play';
+  $('game-chapter-name').textContent=ch?ch.title:'Open Sea';
+
+  // level strip (story only)
+  if(mode==='story'){
+    $('level-strip').style.display='flex';
+    renderDots(idx+1);
+  } else {
+    $('level-strip').style.display='none';
+  }
+
+  // tutorial steps
+  tutStep=-1; tutSteps=[];
+  if(ch&&ch.tutorial&&TUTORIAL_STEPS[idx]){
+    tutSteps=TUTORIAL_STEPS[idx];
+  }
+
+  hintsLeft=3;
+  renderHintPips();
+  initPuzzle(ch);
+}
+
+// ═══════════════════════════════════════════════════
+//  PUZZLE INIT
+// ═══════════════════════════════════════════════════
+function initPuzzle(ch){
+  clearHint(); history=[]; moves=0; solution=null; parScore=null;
+
+  // cell sizing (HIG min 44pt)
+  const gap=SIZE===3?10:SIZE===4?9:8;
+  const pad=16;
+  const avail=Math.min(window.innerWidth-40,340);
+  const cs=Math.max(44,Math.floor((avail-pad*2-gap*(SIZE-1))/SIZE));
+  gridEl.style.gap=gap+'px';
+  gridEl.style.padding=pad+'px';
+  gridEl.style.setProperty('--cs',cs+'px');
+
+  const presses=ch?ch.presses:(6+Math.floor(Math.random()*6));
+  grid=Array.from({length:SIZE},()=>new Uint8Array(SIZE));
+  for(let k=0;k<presses;k++) applyToggle(~~(Math.random()*SIZE),~~(Math.random()*SIZE));
+
+  initLit=countLit();
+  if(!initLit){initPuzzle(ch);return;}
+  savedGrid=grid.map(r=>r.slice());
+
+  solution=computeSol();
+  parScore=solution?solution.reduce((s,v)=>s+v,0):null;
+
+  updateDisplay();
+  renderGrid();
+
+  // show first tutorial step after grid renders
+  if(tutSteps.length>0){
+    setTimeout(()=>showTutStep(0),500);
+  }
+}
+
+function applyToggle(r,c){tog(r,c);tog(r-1,c);tog(r+1,c);tog(r,c-1);tog(r,c+1);}
+function tog(r,c){if(r>=0&&r<SIZE&&c>=0&&c<SIZE)grid[r][c]^=1;}
+function computeSol(){
+  const f=new Uint8Array(SIZE*SIZE);
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)f[r*SIZE+c]=grid[r][c];
+  return solveGF2(SIZE,f);
+}
+
+// ═══════════════════════════════════════════════════
+//  TUTORIAL STEPS
+// ═══════════════════════════════════════════════════
+function showTutStep(stepIdx){
+  if(stepIdx>=tutSteps.length){hideTutTip();return;}
+  tutStep=stepIdx;
+  const step=tutSteps[stepIdx];
+  $('tut-tip-label').textContent=step.label;
+  $('tut-tip-text').textContent=step.text;
+  $('tut-tip').classList.add('show');
+}
+
+function hideTutTip(){
+  $('tut-tip').classList.remove('show');
+  tutStep=-1;
+}
+
+$('tut-tip-ok').addEventListener('click',()=>hideTutTip());
+
+// ═══════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════
+function renderGrid(){
+  const cs=gridEl.style.getPropertyValue('--cs');
+  gridEl.style.gridTemplateColumns=`repeat(${SIZE},${cs})`;
+  gridEl.innerHTML=''; gridEl.classList.remove('win-pulse');
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const el=document.createElement('div');
+    el.className=`cell cell-in${grid[r][c]?' on':''}`;
+    el.style.width=el.style.height=cs;
+    el.style.animationDelay=(r*SIZE+c)*14+'ms';
+    el.dataset.r=r; el.dataset.c=c;
+    el.addEventListener('pointerdown',onTap);
+    gridEl.appendChild(el);
+  }
+}
+
+function syncGrid(){
+  gridEl.querySelectorAll('.cell').forEach(el=>{
+    el.classList.toggle('on',!!grid[+el.dataset.r][+el.dataset.c]);
+    el.classList.remove('hint-cell');
+  });
+  markHint();
+}
+
+function renderDots(currentLvl){
+  const wrap=$('level-dots'); wrap.innerHTML='';
+  const total=20;
+  for(let i=1;i<=total;i++){
+    if(i===4||i===11){const s=document.createElement('div');s.className='ldot phase-sep';wrap.appendChild(s);}
+    const d=document.createElement('div'); d.className='ldot';
+    d.style.width=i<=3?'20px':i<=10?'15px':'10px';
+    if(i<currentLvl) d.classList.add('done');
+    else if(i===currentLvl) d.classList.add('curr');
+    wrap.appendChild(d);
+  }
+  $('level-badge').textContent=`Chapter ${currentLvl}`;
+  $('level-phase').textContent=CHAPTERS[currentLvl-1]?phaseStr(CHAPTERS[currentLvl-1].size):'';
+}
+
+function phaseStr(n){ return `${n} × ${n}`; }
+
+// ═══════════════════════════════════════════════════
+//  TAP
+// ═══════════════════════════════════════════════════
+function onTap(e){
+  e.preventDefault();
+  if(tutStep>=0) return; // block taps during tip display
+  const el=e.currentTarget, r=+el.dataset.r, c=+el.dataset.c;
+  history.push(grid.map(x=>x.slice())); if(history.length>60)history.shift();
+  el.classList.remove('tap-dim'); void el.offsetWidth; el.classList.add('tap-dim');
+  applyToggle(r,c); moves++;
+  solution=computeSol(); clearHint();
+  syncGrid(); updateDisplay(); checkWin();
+}
+
+// ═══════════════════════════════════════════════════
+//  WIN
+// ═══════════════════════════════════════════════════
+function countLit(){let s=0;for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)s+=grid[r][c];return s;}
+
+function checkWin(){
+  if(countLit()) return;
+  gridEl.classList.add('win-pulse');
+
+  // persist stats
+  save.totalMoves=(save.totalMoves||0)+moves;
+  if(MODE==='story'){
+    const lvl=chapterIdx+1;
+    if(!save.bestStory[lvl]||moves<save.bestStory[lvl]) save.bestStory[lvl]=moves;
+    if(lvl>=save.storyLevel) save.storyLevel=Math.min(lvl+1,21);
+  } else {
+    if(save.endlessBest===null||moves<save.endlessBest) save.endlessBest=moves;
+  }
+  writeSave(save);
+
+  setTimeout(()=>showWinSheet(), 380);
+}
+
+function showWinSheet(){
+  const isLast=MODE==='story'&&chapterIdx===19;
+  $('win-icon').textContent=isLast?'★':'✦';
+  $('win-title').textContent=isLast?'The Light Returns':MODE==='story'?'Room Cleared':'Puzzle Solved';
+  $('win-sub').textContent=isLast?'Mor Cove is safe':MODE==='story'?`Chapter ${chapterIdx+1} complete`:'All lights off';
+  $('win-moves').textContent=moves;
+
+  // par display
+  const ps=parScore;
+  let parEl=$('win-par-val');
+  if(ps!==null){
+    const diff=moves-ps;
+    parEl.textContent=diff===0?'Par':diff<0?`${diff} (Eagle!)`:`+${diff}`;
+    parEl.className=diff<0?'par-under':diff===0?'par-at':'par-over';
+  } else { parEl.textContent='—'; parEl.className=''; }
+
+  const lvl=chapterIdx+1;
+  $('win-best').textContent=save.bestStory[lvl]!==undefined?save.bestStory[lvl]:(save.endlessBest||'—');
+
+  const nextBtn=$('btn-next');
+  if(isLast){
+    nextBtn.textContent='Play Again';
+    nextBtn.onclick=()=>{
+      $('overlay-win').classList.remove('show');
+      save.storyLevel=1; writeSave(save);
+      updateMenu(); showScreen('screen-menu');
+    };
+  } else if(MODE==='story'){
+    const nextIdx=chapterIdx+1;
+    nextBtn.textContent=`Chapter ${nextIdx+1}: ${CHAPTERS[nextIdx].title}`;
+    nextBtn.onclick=()=>{ $('overlay-win').classList.remove('show'); startStoryChapter(nextIdx); };
+  } else {
+    nextBtn.textContent='Next Puzzle';
+    nextBtn.onclick=()=>{ $('overlay-win').classList.remove('show'); launchGame('endless',0); };
+  }
+  $('overlay-win').classList.add('show');
+}
+
+// ═══════════════════════════════════════════════════
+//  DISPLAY
+// ═══════════════════════════════════════════════════
+function updateDisplay(){
+  const lit=countLit();
+  $('moves-display').textContent=moves;
+  $('lit-display').textContent=lit;
+  $('par-display').textContent=parScore!==null?parScore:'—';
+
+  // progress bar
+  const p=initLit>0?((initLit-lit)/initLit)*100:0;
+  $('progress-bar').style.width=Math.max(0,Math.min(100,p))+'%';
+
+  // par badge (top right)
+  const badge=$('par-badge');
+  if(parScore!==null&&moves>0){
+    const d=moves-parScore;
+    badge.textContent=d===0?'Par':d<0?`${d}`:`+${d}`;
+    badge.className='par-badge'+(d<0?' under':d===0?' at':' over');
+  } else {
+    badge.textContent=`Par ${parScore!==null?parScore:'—'}`;
+    badge.className='par-badge';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  HINT
+// ═══════════════════════════════════════════════════
+function showHint(){
+  if(hintsLeft<=0){ toast('No hints left',true); return; }
+  clearHint(); let idx=null;
+  if(solution) for(let i=0;i<solution.length;i++) if(solution[i]){idx=i;break;}
+  if(idx===null){
+    let bd=-Infinity,bl=countLit();
+    for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+      applyToggle(r,c);const al=countLit();applyToggle(r,c);
+      if(bl-al>bd){bd=bl-al;idx=r*SIZE+c;}
+    }
+  }
+  if(idx===null) return;
+  hintsLeft--; save.hintsUsed=(save.hintsUsed||0)+1; writeSave(save);
+  hintIdx=idx; markHint(); renderHintPips();
+  $('btn-hint').classList.add('hinting');
+  toast('Hint');
+}
+
+function renderHintPips(){
+  const wrap=$('hint-pips'); wrap.innerHTML='';
+  for(let i=0;i<3;i++){
+    const pip=document.createElement('div');
+    pip.className='pip'+(i>=hintsLeft?' used':'');
+    wrap.appendChild(pip);
+  }
+}
+
+function markHint(){
+  if(hintIdx===null)return;
+  const el=gridEl.querySelector(`[data-r="${~~(hintIdx/SIZE)}"][data-c="${hintIdx%SIZE}"]`);
+  if(el)el.classList.add('hint-cell');
+}
+function clearHint(){
+  gridEl.querySelectorAll('.hint-cell').forEach(el=>el.classList.remove('hint-cell'));
+  hintIdx=null; $('btn-hint').classList.remove('hinting');
+}
+
+// ═══════════════════════════════════════════════════
+//  UNDO / RESTART
+// ═══════════════════════════════════════════════════
+function undo(){
+  if(!history.length){
+    gridEl.classList.add('shake'); setTimeout(()=>gridEl.classList.remove('shake'),280);
+    toast('Nothing to undo',true); return;
+  }
+  grid=history.pop(); moves=Math.max(0,moves-1);
+  solution=computeSol(); clearHint(); syncGrid(); updateDisplay();
+}
+
+function restart(){
+  if(!savedGrid)return;
+  clearHint(); hideTutTip();
+  history=[]; moves=0;
+  grid=savedGrid.map(r=>r.slice()); initLit=countLit();
+  solution=computeSol(); syncGrid(); updateDisplay();
+  toast('Restarted');
+  if(tutSteps.length>0) setTimeout(()=>showTutStep(0),400);
+}
+
+// ═══════════════════════════════════════════════════
+//  BACK FROM GAME
+// ═══════════════════════════════════════════════════
+$('game-back-btn').addEventListener('click',()=>{
+  hideTutTip();
+  $('overlay-win').classList.remove('show');
+  if(MODE==='story'){ buildChapterList(); showScreen('screen-chapters'); }
+  else { updateMenu(); showScreen('screen-menu'); }
+});
+
+// ═══════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════
+let _tt;
+function toast(msg,alt=false){
+  const el=$('toast'); el.textContent=msg;
+  el.className=`toast show${alt?' alt':''}`;
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),1400);
+}
+
+// ═══════════════════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════════════════
+$('btn-hint').addEventListener('click',showHint);
+$('btn-restart').addEventListener('click',restart);
+$('btn-undo').addEventListener('click',undo);
+gridEl.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+
+// ═══════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════
+updateMenu();
+showScreen('screen-menu');
+</script>
+</body>
+</html>
