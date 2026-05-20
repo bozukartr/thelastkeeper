@@ -159,6 +159,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 .btn-destructive{background:var(--surface);color:var(--danger);}
 .hint-count{font-size:12px;font-weight:700;margin-left:5px;color:var(--accent-lt);}
 .hint-count.empty{color:var(--danger);}
+.undo-count{font-size:12px;font-weight:700;margin-left:5px;color:var(--danger);opacity:0.7;}
+.undo-count.empty{opacity:1;}
+.store-tabs{display:flex;gap:6px;margin-bottom:14px;}
+.store-tab{flex:1;height:38px;border:none;border-radius:var(--r-md);
+  font-family:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--ink2);transition:background 0.2s,color 0.2s;}
+.store-tab.active{background:var(--accent);color:#FBF5EC;}
 
 /* OVERLAYS */
 .overlay{position:fixed;inset:0;background:rgba(240,234,225,0.75);
@@ -290,7 +297,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
   <div class="controls">
     <button class="btn btn-secondary" id="btn-hint">Hint<span class="hint-count" id="hint-count">×3</span></button>
     <button class="btn btn-primary" id="btn-restart">Restart</button>
-    <button class="btn btn-destructive" id="btn-undo">Undo</button>
+    <button class="btn btn-destructive" id="btn-undo">Undo<span class="undo-count" id="undo-count">×3</span></button>
   </div>
 </div>
 
@@ -322,9 +329,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 <div class="overlay" id="overlay-store">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <span class="sheet-icon">💡</span>
-    <div class="sheet-title">Buy Hints</div>
-    <div class="sheet-sub">Hints carry over between all levels</div>
+    <div class="sheet-title">Buy Power-ups</div>
+    <div class="sheet-sub">Carry over between all levels</div>
+    <div class="store-tabs">
+      <button class="store-tab active" id="tab-hints">💡 Hints</button>
+      <button class="store-tab" id="tab-undos">↩ Undos</button>
+    </div>
     <div class="iap-list" id="iap-list"></div>
     <button class="btn btn-secondary" style="width:100%" id="btn-store-close">Cancel</button>
   </div>
@@ -426,6 +436,7 @@ if(!save.hintPool)      save.hintPool=0;
 if(!save.hintsUsed)     save.hintsUsed=0;
 if(!save.hintMilestones)save.hintMilestones={};
 if(!save.lastDailyHint) save.lastDailyHint=null;
+if(!save.undoPool)      save.undoPool=0;
 writeSave(save);
 
 function totalStars(){return Object.values(save.levelStars).reduce((a,b)=>a+b,0);}
@@ -449,7 +460,7 @@ function showScreen(id){
 
 // ── GAME STATE ───────────────────────────────────────
 let SIZE=3,grid=[],moves=0,history=[],solution=null;
-let hintIdx=null,hintsLeft=3,initLit=0,savedGrid=null,parScore=null;
+let hintIdx=null,hintsLeft=3,undosLeft=3,initLit=0,savedGrid=null,parScore=null;
 let activeLevelIdx=0; // 0-based
 
 const $=id=>document.getElementById(id);
@@ -540,7 +551,9 @@ function startLevel(idx){
   $('game-ch-tag').textContent=`Chapter ${ci+1} · ${CHAPTERS[ci].name}`;
   $('game-lev-tag').textContent=`Level ${lvl}`;
   hintsLeft=3;
+  undosLeft=3;
   renderHintCount();
+  renderUndoCount();
   showScreen('screen-game');
   initPuzzle();
 }
@@ -746,6 +759,11 @@ function renderHintCount(){
   const el=$('hint-count');el.textContent='×'+t;
   el.className='hint-count'+(t===0?' empty':'');
 }
+function renderUndoCount(){
+  const t=undosLeft+(save.undoPool||0);
+  const el=$('undo-count');el.textContent='×'+t;
+  el.className='undo-count'+(t===0?' empty':'');
+}
 function markHint(){
   if(hintIdx===null)return;
   const el=gridEl.querySelector(`[data-r="${~~(hintIdx/SIZE)}"][data-c="${hintIdx%SIZE}"]`);
@@ -762,8 +780,14 @@ function undo(){
     gridEl.classList.add('shake');setTimeout(()=>gridEl.classList.remove('shake'),280);
     toast('Nothing to undo',true);return;
   }
+  const total=undosLeft+(save.undoPool||0);
+  if(total<=0){openStore('undos');return;}
+  if(undosLeft>0)undosLeft--;
+  else save.undoPool=Math.max(0,(save.undoPool||0)-1);
+  writeSave(save);
   grid=history.pop();moves=Math.max(0,moves-1);
   solution=computeSol();clearHint();syncGrid();updateDisplay();
+  renderUndoCount();
 }
 function restart(){
   if(!savedGrid)return;
@@ -816,36 +840,74 @@ const IAP_PACKS=[
   {hints:100,bonus:9,price:'9.99'},
   {hints:1000,bonus:30,price:'79.99'},
 ];
-function openStore(){
-  const list=$('iap-list');list.innerHTML='';
-  IAP_PACKS.forEach(pack=>{
-    const total=pack.hints+pack.bonus;
-    const row=document.createElement('div');row.className='iap-row';
-    row.innerHTML=`
-      <div class="iap-info">
-        <div class="iap-label">${pack.hints}${pack.bonus?` <em class="iap-bonus">+${pack.bonus} bonus</em>`:''} Hints</div>
-      </div>
-      <div class="iap-right">
-        <span class="iap-price">$${pack.price}</span>
-        <div class="spinner"></div><span class="success-check">✓</span>
-      </div>`;
-    row.addEventListener('click',()=>simulatePurchase(row,total));
-    list.appendChild(row);
-  });
+const UNDO_PACKS=[
+  {undos:20,bonus:0,price:'0.99'},
+  {undos:100,bonus:6,price:'4.99'},
+  {undos:200,bonus:18,price:'9.99'},
+  {undos:2000,bonus:60,price:'79.99'},
+];
+let _storeTab='hints';
+function openStore(tab='hints'){
+  _storeTab=tab;
+  buildStoreTab(tab);
   $('overlay-store').classList.add('show');
 }
+function buildStoreTab(tab){
+  _storeTab=tab;
+  $('tab-hints').classList.toggle('active',tab==='hints');
+  $('tab-undos').classList.toggle('active',tab==='undos');
+  const list=$('iap-list');list.innerHTML='';
+  if(tab==='hints'){
+    IAP_PACKS.forEach(pack=>{
+      const total=pack.hints+pack.bonus;
+      const row=document.createElement('div');row.className='iap-row';
+      row.innerHTML=`
+        <div class="iap-info">
+          <div class="iap-label">${pack.hints}${pack.bonus?` <em class="iap-bonus">+${pack.bonus} bonus</em>`:''} Hints</div>
+        </div>
+        <div class="iap-right">
+          <span class="iap-price">$${pack.price}</span>
+          <div class="spinner"></div><span class="success-check">✓</span>
+        </div>`;
+      row.addEventListener('click',()=>simulatePurchase(row,total,'hints'));
+      list.appendChild(row);
+    });
+  } else {
+    UNDO_PACKS.forEach(pack=>{
+      const total=pack.undos+pack.bonus;
+      const row=document.createElement('div');row.className='iap-row';
+      row.innerHTML=`
+        <div class="iap-info">
+          <div class="iap-label">${pack.undos}${pack.bonus?` <em class="iap-bonus">+${pack.bonus} bonus</em>`:''} Undos</div>
+        </div>
+        <div class="iap-right">
+          <span class="iap-price">$${pack.price}</span>
+          <div class="spinner"></div><span class="success-check">✓</span>
+        </div>`;
+      row.addEventListener('click',()=>simulatePurchase(row,total,'undos'));
+      list.appendChild(row);
+    });
+  }
+}
 function closeStore(){$('overlay-store').classList.remove('show');}
-function simulatePurchase(row,total){
+function simulatePurchase(row,total,type){
   $('iap-list').querySelectorAll('.iap-row').forEach(r=>r.style.pointerEvents='none');
   row.classList.add('processing');
   setTimeout(()=>{
     row.classList.remove('processing');row.classList.add('success');
-    save.hintPool=(save.hintPool||0)+total;writeSave(save);renderHintCount();
-    setTimeout(()=>{closeStore();toast(`+${total} hints added!`);},800);
+    if(type==='hints'){
+      save.hintPool=(save.hintPool||0)+total;writeSave(save);renderHintCount();
+      setTimeout(()=>{closeStore();toast(`+${total} hints added!`);},800);
+    } else {
+      save.undoPool=(save.undoPool||0)+total;writeSave(save);renderUndoCount();
+      setTimeout(()=>{closeStore();toast(`+${total} undos added!`);},800);
+    }
   },1600);
 }
-$('btn-store').addEventListener('click',openStore);
+$('btn-store').addEventListener('click',()=>openStore('hints'));
 $('btn-store-close').addEventListener('click',closeStore);
+$('tab-hints').addEventListener('click',()=>buildStoreTab('hints'));
+$('tab-undos').addEventListener('click',()=>buildStoreTab('undos'));
 
 // ── BOOT ─────────────────────────────────────────────
 checkDailyHint();
