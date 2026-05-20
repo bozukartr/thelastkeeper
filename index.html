@@ -543,6 +543,44 @@ html,body {
 .toast.show { transform:translateX(-50%) translateY(0); }
 .toast.alt  { background:var(--hint); color:#fff; }
 
+/* ══════════════════════════════════════════
+   IAP STORE
+══════════════════════════════════════════ */
+.iap-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+
+.iap-row {
+  background:var(--surface); border-radius:var(--r-md);
+  padding:14px 16px;
+  display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; transition:opacity 0.12s;
+}
+.iap-row:active { opacity:0.7; }
+.iap-row.processing, .iap-row.success { pointer-events:none; }
+
+.iap-info { display:flex; flex-direction:column; gap:2px; }
+.iap-label { font-size:16px; font-weight:700; color:var(--ink); letter-spacing:-0.01em; }
+.iap-bonus { color:var(--hint); font-weight:600; font-style:normal; }
+.iap-right { display:flex; align-items:center; gap:6px; }
+.iap-price { font-size:15px; font-weight:700; color:var(--accent); }
+
+@keyframes spin { to{ transform:rotate(360deg); } }
+.spinner {
+  display:none; width:16px; height:16px; border-radius:50%;
+  border:2.5px solid var(--divider); border-top-color:var(--accent);
+  animation:spin 0.7s linear infinite;
+}
+.iap-row.processing .spinner  { display:block; }
+.iap-row.processing .iap-price { display:none; }
+.success-check { display:none; font-size:17px; color:var(--hint); }
+.iap-row.success .iap-price    { display:none; }
+.iap-row.success .success-check { display:block; }
+
+.hint-count {
+  font-size:12px; font-weight:700; margin-left:5px;
+  color:var(--accent-lt);
+}
+.hint-count.empty { color:var(--danger); }
+
 /* tutorial overlay tip */
 .tut-tip {
   position:fixed; bottom:0; left:0; right:0;
@@ -654,7 +692,10 @@ html,body {
         <div class="game-chapter-name" id="game-chapter-name"></div>
       </div>
     </div>
-    <div class="par-badge" id="par-badge">Par —</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="icon-btn" id="btn-store" style="font-size:13px;font-weight:700">💡+</button>
+      <div class="par-badge" id="par-badge">Par —</div>
+    </div>
   </div>
 
   <!-- level dots (story only) -->
@@ -696,7 +737,7 @@ html,body {
   <div class="controls">
     <button class="btn btn-secondary" id="btn-hint">
       Hint
-      <div class="hint-pips" id="hint-pips"></div>
+      <span class="hint-count" id="hint-count">×3</span>
     </button>
     <button class="btn btn-primary"    id="btn-restart">Restart</button>
     <button class="btn btn-destructive" id="btn-undo">Undo</button>
@@ -718,6 +759,20 @@ html,body {
       <div class="sheet-row"><span>Best</span> <span id="win-best">—</span></div>
     </div>
     <button class="btn btn-primary" style="width:100%" id="btn-next">Next Chapter</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     IAP STORE OVERLAY
+════════════════════════════════════════════ -->
+<div class="overlay" id="overlay-store">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <span class="sheet-icon">💡</span>
+    <div class="sheet-title">Buy Hints</div>
+    <div class="sheet-sub">Hints carry over between all chapters</div>
+    <div class="iap-list" id="iap-list"></div>
+    <button class="btn btn-secondary" style="width:100%" id="btn-store-close">Cancel</button>
   </div>
 </div>
 
@@ -934,12 +989,13 @@ function writeSave(s){ localStorage.setItem(SAVE_KEY, JSON.stringify(s)); }
 
 let save = loadSave();
 // save structure:
-// { storyLevel, bestStory:{1:moves,...}, endlessBest, totalMoves, hintsUsed }
+// { storyLevel, bestStory:{1:moves,...}, endlessBest, totalMoves, hintsUsed, hintPool }
 if(!save.storyLevel) save.storyLevel=1;
 if(!save.bestStory)  save.bestStory={};
 if(!save.endlessBest) save.endlessBest=null;
 if(!save.totalMoves)  save.totalMoves=0;
 if(!save.hintsUsed)   save.hintsUsed=0;
+if(!save.hintPool)    save.hintPool=0;
 writeSave(save);
 
 // ═══════════════════════════════════════════════════
@@ -1091,7 +1147,7 @@ function launchGame(mode, idx){
   }
 
   hintsLeft=3;
-  renderHintPips();
+  renderHintCount();
   initPuzzle(ch);
 }
 
@@ -1304,12 +1360,12 @@ function updateDisplay(){
 //  HINT
 // ═══════════════════════════════════════════════════
 function showHint(){
-  if(hintsLeft<=0){ toast('No hints left',true); return; }
+  const total=hintsLeft+(save.hintPool||0);
+  if(total<=0){ openStore(); return; }
   clearHint();
-  solution=computeSol();  // always recompute from current board state
+  solution=computeSol();
   let idx=null;
   if(solution){
-    // among optimal cells, pick the one that reduces the most lights now
     let bestGain=-Infinity;
     for(let i=0;i<solution.length;i++){
       if(!solution[i]) continue;
@@ -1327,19 +1383,20 @@ function showHint(){
     }
   }
   if(idx===null) return;
-  hintsLeft--; save.hintsUsed=(save.hintsUsed||0)+1; writeSave(save);
-  hintIdx=idx; markHint(); renderHintPips();
+  // draw from free hints first, then purchased pool
+  if(hintsLeft>0){ hintsLeft--; }
+  else { save.hintPool=Math.max(0,(save.hintPool||0)-1); }
+  save.hintsUsed=(save.hintsUsed||0)+1; writeSave(save);
+  hintIdx=idx; markHint(); renderHintCount();
   $('btn-hint').classList.add('hinting');
   toast('Hint');
 }
 
-function renderHintPips(){
-  const wrap=$('hint-pips'); wrap.innerHTML='';
-  for(let i=0;i<3;i++){
-    const pip=document.createElement('div');
-    pip.className='pip'+(i>=hintsLeft?' used':'');
-    wrap.appendChild(pip);
-  }
+function renderHintCount(){
+  const total=hintsLeft+(save.hintPool||0);
+  const el=$('hint-count');
+  el.textContent='×'+total;
+  el.className='hint-count'+(total===0?' empty':'');
 }
 
 function markHint(){
@@ -1401,6 +1458,61 @@ $('btn-hint').addEventListener('click',showHint);
 $('btn-restart').addEventListener('click',restart);
 $('btn-undo').addEventListener('click',undo);
 gridEl.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+
+// ═══════════════════════════════════════════════════
+//  IAP STORE
+// ═══════════════════════════════════════════════════
+const IAP_PACKS = [
+  { hints:10,  bonus:0,  price:'0.99' },
+  { hints:50,  bonus:3,  price:'4.99' },
+  { hints:100, bonus:9,  price:'9.99' },
+  { hints:1000,bonus:30, price:'79.99'},
+];
+
+function openStore(){
+  const list=$('iap-list'); list.innerHTML='';
+  IAP_PACKS.forEach(pack=>{
+    const total=pack.hints+pack.bonus;
+    const row=document.createElement('div');
+    row.className='iap-row';
+    row.innerHTML=`
+      <div class="iap-info">
+        <div class="iap-label">${pack.hints}${pack.bonus?` <em class="iap-bonus">+${pack.bonus} bonus</em>`:''} Hints</div>
+      </div>
+      <div class="iap-right">
+        <span class="iap-price">$${pack.price}</span>
+        <div class="spinner"></div>
+        <span class="success-check">✓</span>
+      </div>`;
+    row.addEventListener('click',()=>simulatePurchase(row,total));
+    list.appendChild(row);
+  });
+  $('overlay-store').classList.add('show');
+}
+
+function closeStore(){
+  $('overlay-store').classList.remove('show');
+}
+
+function simulatePurchase(row,total){
+  // freeze all rows while processing
+  $('iap-list').querySelectorAll('.iap-row').forEach(r=>r.style.pointerEvents='none');
+  row.classList.add('processing');
+  setTimeout(()=>{
+    row.classList.remove('processing');
+    row.classList.add('success');
+    save.hintPool=(save.hintPool||0)+total;
+    writeSave(save);
+    renderHintCount();
+    setTimeout(()=>{
+      closeStore();
+      toast(`+${total} hints added!`);
+    },800);
+  },1600);
+}
+
+$('btn-store').addEventListener('click',openStore);
+$('btn-store-close').addEventListener('click',closeStore);
 
 // ═══════════════════════════════════════════════════
 //  BOOT
